@@ -43,9 +43,10 @@ jobs:
             $p=Start-Process dist/SmallAI.exe -ArgumentList "--smoke-test $i" -PassThru
             if(!$p.WaitForExit(480000)){Stop-Process -Id $p.Id -Force;throw "Model $i exceeded 8 minute test limit"}
             New-Item "evidence/model-$i" -ItemType Directory -Force
-            Copy-Item dist/ui-*.png,dist/smoke-*.txt "evidence/model-$i/" -ErrorAction SilentlyContinue
+            Copy-Item dist/ui-*.png,dist/smoke-*.txt,dist/extended-results.txt "evidence/model-$i/" -ErrorAction SilentlyContinue
             if($p.ExitCode -ne 0){throw "Model $i test failed with exit $($p.ExitCode)"}
             Get-Content dist/smoke-result.txt
+            Get-Content dist/extended-results.txt
             Remove-Item dist/smoke-*.txt -ErrorAction SilentlyContinue
           }
       - name: Upload private app artifact
