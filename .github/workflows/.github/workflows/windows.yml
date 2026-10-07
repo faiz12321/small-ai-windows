@@ -1,0 +1,59 @@
+name: Private Windows prototype tests
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build self-contained Windows app
+        shell: pwsh
+        run: |
+          ./prepare.ps1
+          dotnet publish src/SmallAI.csproj -c Release -r win-x64 --self-contained true -o dist
+      - name: Bundle pinned CPU engine and licenses
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          Invoke-WebRequest https://github.com/ggml-org/llama.cpp/releases/download/b9999/llama-b9999-bin-win-cpu-x64.zip -OutFile engine.zip
+          Expand-Archive engine.zip dist/engine
+          New-Item dist/licenses -ItemType Directory -Force
+          Invoke-WebRequest https://raw.githubusercontent.com/ggml-org/llama.cpp/b9999/LICENSE -OutFile dist/licenses/llama-MIT.txt
+          Invoke-WebRequest https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/90862c4/LICENSE -OutFile dist/licenses/Qwen3-Apache.txt
+          Invoke-WebRequest https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/LICENSE -OutFile dist/licenses/Qwen35-Apache.txt
+          Invoke-WebRequest https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/LICENSE -OutFile dist/licenses/Apache-2.0.txt
+          Copy-Item README.md dist
+          Get-FileHash dist/engine/* | Format-Table | Out-File dist/engine-hashes.txt
+      - name: Render actual Windows UI
+        shell: pwsh
+        run: |
+          $p=Start-Process dist/SmallAI.exe -ArgumentList '--ui-test' -PassThru -Wait
+          if($p.ExitCode -ne 0 -or !(Test-Path dist/ui-home.png)){throw 'WPF UI render failed'}
+      - name: Download verify load and answer with every selected model
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          foreach($i in 0..2){
+            $p=Start-Process dist/SmallAI.exe -ArgumentList "--smoke-test $i" -PassThru
+            if(!$p.WaitForExit(480000)){Stop-Process -Id $p.Id -Force;throw "Model $i exceeded 8 minute test limit"}
+            New-Item "evidence/model-$i" -ItemType Directory -Force
+            Copy-Item dist/ui-*.png,dist/smoke-*.txt "evidence/model-$i/" -ErrorAction SilentlyContinue
+            if($p.ExitCode -ne 0){throw "Model $i test failed with exit $($p.ExitCode)"}
+            Get-Content dist/smoke-result.txt
+            Remove-Item dist/smoke-*.txt -ErrorAction SilentlyContinue
+          }
+      - name: Upload private app artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SmallAI-Windows-private-prototype
+          path: |
+            dist
+            evidence
+          retention-days: 2
