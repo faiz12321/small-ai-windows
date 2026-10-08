@@ -35,20 +35,24 @@ jobs:
         run: |
           $p=Start-Process dist/SmallAI.exe -ArgumentList '--ui-test' -PassThru -Wait
           if($p.ExitCode -ne 0 -or !(Test-Path dist/ui-home.png)){throw 'WPF UI render failed'}
-      - name: Download verify load and answer with every selected model
+      - name: Standard-user expanded regression
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          foreach($i in 0..2){
-            $p=Start-Process dist/SmallAI.exe -ArgumentList "--smoke-test $i" -PassThru
-            if(!$p.WaitForExit(480000)){Stop-Process -Id $p.Id -Force;throw "Model $i exceeded 8 minute test limit"}
-            New-Item "evidence/model-$i" -ItemType Directory -Force
-            Copy-Item dist/ui-*.png,dist/smoke-*.txt,dist/extended-results.txt "evidence/model-$i/" -ErrorAction SilentlyContinue
-            if($p.ExitCode -ne 0){throw "Model $i test failed with exit $($p.ExitCode)"}
-            Get-Content dist/smoke-result.txt
-            Get-Content dist/extended-results.txt
-            Remove-Item dist/smoke-*.txt -ErrorAction SilentlyContinue
-          }
+          $password=ConvertTo-SecureString ('Test!'+[guid]::NewGuid().ToString()) -AsPlainText -Force
+          New-LocalUser -Name SmallAITester -Password $password | Out-Null
+          Add-LocalGroupMember -Group Users -Member SmallAITester
+          $target='C:\Small AI Test'
+          New-Item $target -ItemType Directory -Force
+          Copy-Item dist/* $target -Recurse
+          icacls $target /grant 'SmallAITester:(OI)(CI)M'
+          $cred=New-Object System.Management.Automation.PSCredential('.\SmallAITester',$password)
+          $p=Start-Process "$target/SmallAI.exe" -ArgumentList '--regression-test' -Credential $cred -LoadUserProfile -WorkingDirectory $target -PassThru
+          if(!$p.WaitForExit(1200000)){Stop-Process -Id $p.Id -Force;throw 'Regression timeout'}
+          New-Item evidence -ItemType Directory -Force
+          Copy-Item "$target/*.txt","$target/*.png" evidence -ErrorAction SilentlyContinue
+          Get-Content evidence/regression-results.txt
+          if($p.ExitCode -ne 0){Get-Content evidence/regression-error.txt;throw "Regression failed $($p.ExitCode)"}
       - name: Upload private app artifact
         if: always()
         uses: actions/upload-artifact@v4
