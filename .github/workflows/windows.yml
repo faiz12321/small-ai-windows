@@ -26,8 +26,7 @@ jobs:
           New-Item dist/licenses -ItemType Directory -Force
           Invoke-WebRequest https://raw.githubusercontent.com/ggml-org/llama.cpp/b9999/LICENSE -OutFile dist/licenses/llama-MIT.txt
           Invoke-WebRequest https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/90862c4/LICENSE -OutFile dist/licenses/Qwen3-Apache.txt
-          Invoke-WebRequest https://huggingface.co/Qwen/Qwen3.5-0.8B/resolve/main/LICENSE -OutFile dist/licenses/Qwen35-Apache.txt
-          Invoke-WebRequest https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/LICENSE -OutFile dist/licenses/Apache-2.0.txt
+          Invoke-WebRequest https://huggingface.co/HuggingFaceTB/SmolLM3-3B/resolve/main/LICENSE -OutFile dist/licenses/SmolLM3-Apache.txt
           Copy-Item README.md dist
           Get-FileHash dist/engine/* | Format-Table | Out-File dist/engine-hashes.txt
       - name: Render actual Windows UI
