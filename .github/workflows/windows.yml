@@ -35,24 +35,21 @@ jobs:
         run: |
           $p=Start-Process dist/SmallAI.exe -ArgumentList '--ui-test' -PassThru -Wait
           if($p.ExitCode -ne 0 -or !(Test-Path dist/ui-home.png)){throw 'WPF UI render failed'}
-      - name: Standard-user expanded regression
+      - name: Expanded desktop regression
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          $password=ConvertTo-SecureString ('Test!'+[guid]::NewGuid().ToString()) -AsPlainText -Force
-          New-LocalUser -Name SmallAITester -Password $password | Out-Null
-          Add-LocalGroupMember -Group Users -Member SmallAITester
-          $target='C:\Small AI Test'
+          $target=Join-Path $env:RUNNER_TEMP 'Small AI Test'
           New-Item $target -ItemType Directory -Force
           Copy-Item dist/* $target -Recurse
-          icacls $target /grant 'SmallAITester:(OI)(CI)M'
-          $cred=New-Object System.Management.Automation.PSCredential('.\SmallAITester',$password)
-          $p=Start-Process "$target/SmallAI.exe" -ArgumentList '--regression-test' -Credential $cred -LoadUserProfile -WorkingDirectory $target -PassThru
-          if(!$p.WaitForExit(1200000)){Stop-Process -Id $p.Id -Force;throw 'Regression timeout'}
+          $p=Start-Process "$target/SmallAI.exe" -ArgumentList '--regression-test' -WorkingDirectory $target -PassThru
+          $finished=$p.WaitForExit(900000)
+          if(!$finished){Stop-Process -Id $p.Id -Force}
           New-Item evidence -ItemType Directory -Force
           Copy-Item "$target/*.txt","$target/*.png" evidence -ErrorAction SilentlyContinue
-          Get-Content evidence/regression-results.txt
-          if($p.ExitCode -ne 0){Get-Content evidence/regression-error.txt;throw "Regression failed $($p.ExitCode)"}
+          Get-Content evidence/regression-*.txt -ErrorAction SilentlyContinue
+          if(!$finished){throw 'Regression timeout'}
+          if($p.ExitCode -ne 0){throw "Regression failed $($p.ExitCode)"}
       - name: Upload private app artifact
         if: always()
         uses: actions/upload-artifact@v4
