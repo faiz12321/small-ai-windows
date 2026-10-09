@@ -28,7 +28,6 @@ jobs:
           Invoke-WebRequest https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/90862c4/LICENSE -OutFile dist/licenses/Qwen3-Apache.txt
           Invoke-WebRequest https://www.apache.org/licenses/LICENSE-2.0.txt -OutFile dist/licenses/Granite-Apache.txt
           Invoke-WebRequest https://huggingface.co/ibm-granite/granite-4.0-1b/raw/main/README.md -OutFile dist/licenses/Granite-model-card.md
-          Invoke-WebRequest https://huggingface.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF/raw/8ed288026e23958ad9dfa92d53ed773a8eee7125/LICENSE -OutFile dist/licenses/LFM-license.txt
           Copy-Item README.md dist
           Get-FileHash dist/engine/* | Format-Table | Out-File dist/engine-hashes.txt
       - name: Render actual Windows UI
