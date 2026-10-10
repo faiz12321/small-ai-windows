@@ -6,7 +6,7 @@ The warm dark "reading desk" layout uses large cream text, amber buttons and a s
 
 ## Download and start
 
-Download **SmallAI-Windows-x64.zip** from this repository's GitHub Releases page. You do not need a GitHub account.
+**Download pending.** Source code is public, but no Windows ZIP is currently available. Binary packaging is paused while the Windows runtime distribution terms are reviewed. The steps below describe the intended download; they do not indicate an available release.
 
 1. Right-click the ZIP and choose **Extract All**. Do not run the app inside the ZIP.
 2. Open the extracted folder and run **SmallAI.exe**. Keep the **engine** and **licenses** folders beside it.
